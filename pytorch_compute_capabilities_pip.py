@@ -1,11 +1,13 @@
 """
-Analyze all PyTorch 2.x versions and generate comprehensive table. Note the inclusion of'manylinux_2_28_x86_64' is release name will only find 2.7.0 and newer (currently through 2.8.0).
+Analyze all PyTorch 2.x versions and generate comprehensive table. Note the inclusion of 'manylinux_2_28_x86_64' is release name will only find 2.7.0 and newer (currently through 2.8.0).
 """
+
 from pathlib import Path
 import subprocess
 import tempfile
 from typing import Any
 import zipfile
+import re
 
 import requests
 
@@ -195,8 +197,7 @@ def get_cuda_architectures(extract_dir: Path) -> list[str]:
 
     try:
         cuobjdump_cmd = "cuobjdump"
-        # I'm running this on a compute cluster with a singularity container
-        # cuobjdump_cmd = "singularity exec --bind /gpfs/mskmind_ess/longy/ /gpfs/mskmind_ess/longy/singularity/cuda.sif cuobjdump"
+        # Example: cuobjdump_cmd = "singularity exec --bind /path/to/bind_dir /path/to/cuda.sif cuobjdump"
         command_raw = f"{cuobjdump_cmd} '{libtorch_path}'"
 
         print(f"Running: {command_raw}")
@@ -334,7 +335,6 @@ def analyze_all_wheels(
                 for arch in archs:
                     if "sm_" in arch:
                         # Extract just the sm_XX part
-                        import re
 
                         match = re.search(r"sm_\d+[a-z]*", arch)
                         if match:
@@ -389,9 +389,8 @@ def generate_pip_table(
         wheel_info = result["wheel_info"]
         archs = result["cuda_architectures"]
 
-        # Create package name in format: torch-2.8.0-py3.10_manylinux_2_28_x86_64
-        python_version = wheel_info["python_version"]
-        package_name = f"{package}-{version}-py{python_version}_manylinux_2_28_x86_64"
+        # Use the actual wheel filename
+        package_name = wheel_info["filename"]
 
         # Format architectures
         if archs:
@@ -486,13 +485,9 @@ def generate_comprehensive_pip_table(all_results: list[dict[str, Any]]) -> str:
     for result in sorted_results:
         wheel_info = result["wheel_info"]
         archs = result["cuda_architectures"]
-        package_version = result["package_version"]
 
-        # Create package name in format: torch-2.8.0-py3.10_manylinux_2_28_x86_64
-        python_version = wheel_info["python_version"]
-        package_name = (
-            f"torch-{package_version}-py{python_version}_manylinux_2_28_x86_64"
-        )
+        # Use the actual wheel filename
+        package_name = wheel_info["filename"]
 
         # Format architectures
         if archs:
